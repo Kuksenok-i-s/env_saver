@@ -9,24 +9,10 @@ import (
 )
 
 func main() {
-	config := config.Config{
-		WatchDir:   "/home/user/",
-		RepoDir:    "./config-repo",
-		RemoteRepo: "private-repo-url",
-		Branch:     "main",
-		SecretKey:  "----",
-	}
+	config := config.GetConfig()
 
-	if err := storage.SaveSecret(config.SecretKey, "your-secret-value"); err != nil {
-		fmt.Printf("Error saving secret: %v\n", err)
-	}
-
-	secret, err := storage.GetSecret(config.SecretKey)
-	if err != nil {
-		fmt.Printf("Error retrieving secret: %v\n", err)
-	} else {
-		fmt.Printf("Retrieved secret: %s\n", secret)
-	}
+	storage.InitStorage(config)
+	fmt.Println("Watching for changes in directory:", config.WatchDir)
 
 	utils.WatchFileChanges(&config)
 }
