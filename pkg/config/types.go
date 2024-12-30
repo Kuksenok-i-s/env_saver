@@ -1,10 +1,10 @@
 package config
 
-type Config struct {
-	// TODO Think twice about this
-	WatchDir   string
-	RepoDir    string
-	RemoteRepo string
-	Branch     string
-	SecretKey  string
+type ConfigDb struct {
+	ID               int
+	WatchDir         string
+	WatchedFileTypes string
+	RemoteRepo       string
+	MakeRemoteBackup bool
+	MakeTags         bool
 }
