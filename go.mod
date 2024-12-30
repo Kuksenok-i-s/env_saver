@@ -11,6 +11,8 @@ require (
 require (
 	al.essio.dev/pkg/shellescape v1.5.1 // indirect
 	github.com/danieljoos/wincred v1.2.2 // indirect
+	github.com/go-yaml/yaml v2.1.0+incompatible // indirect
 	github.com/godbus/dbus/v5 v5.1.0 // indirect
 	golang.org/x/sys v0.26.0 // indirect
+	gopkg.in/yaml.v3 v3.0.1 // indirect
 )
