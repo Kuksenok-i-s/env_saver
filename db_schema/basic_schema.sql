@@ -6,3 +6,12 @@ CREATE TABLE IF NOT EXISTS `events` (
     'commit_id' VARCHAR(255) NOT NULL,
     'commit_message' TEXT,
 )
+
+CREATE TABLE IF NOT EXISTS `configs` (
+    'id' INT NOT NULL AUTO_INCREMENT,
+    'watch_dir' VARCHAR(255) NOT NULL,
+    'watched_file_types' TEXT,
+    'repository_url' VARCHAR(255) NOT NULL,
+    'make_remote_backup' BOOLEAN NOT NULL,
+    'make_tags' BOOLEAN NOT NULL,
+)
