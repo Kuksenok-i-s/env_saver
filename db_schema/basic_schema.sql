@@ -7,8 +7,9 @@ CREATE TABLE IF NOT EXISTS `events` (
     'commit_message' TEXT,
 )
 
-CREATE TABLE IF NOT EXISTS `configs` (
+CREATE TABLE IF NOT EXISTS 'configs' (
     'id' INT NOT NULL AUTO_INCREMENT,
+    'name' VARCHAR(255) NOT NULL,
     'watch_dir' VARCHAR(255) NOT NULL,
     'watched_file_types' TEXT,
     'repository_url' VARCHAR(255) NOT NULL,
