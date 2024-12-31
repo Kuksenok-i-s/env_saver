@@ -16,9 +16,7 @@ func GetConfig() *Config {
 	var data map[string]interface{}
 	// TODO add validation function
 	err = yaml.Unmarshal(f, &data)
-	if !GetConfig().validate(data) {
-		log.Fatal("invalid config =(")
-	}
+
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -33,12 +31,4 @@ func getConfigFromMap(data map[string]interface{}) *Config {
 		RemoteRepo:       data["remote_repo"].(string),
 		MakeRemoteBackup: data["make_remote_backup"].(bool),
 		MakeTags:         data["make_tags"].(bool)}
-}
-
-// TODO refactor this mess XD
-func (c *Config) validate(data map[string]interface{}) bool {
-	if data["watch_dir"] == nil || data["repo_dir"] == nil || data["remote_repo"] == nil || data["branch"] == nil || data["secret_key"] == nil {
-		return false
-	}
-	return true
 }
