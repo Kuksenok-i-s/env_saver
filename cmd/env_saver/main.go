@@ -13,6 +13,6 @@ func main() {
 
 	storage.InitStorage(config)
 	fmt.Println("Watching for changes in directory:", config.WatchDir)
+	utils.WatchFileChanges(config)
 
-	utils.WatchFileChanges(&config)
 }
