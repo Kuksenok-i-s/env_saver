@@ -13,7 +13,7 @@ type Storage struct {
 }
 
 // Forgive me for this
-func InitEventsStorage(config *config.Config) (*Storage, error) {
+func InitStorage(config *config.Config) (*Storage, error) {
 	db, err := sql.Open("sqlite3", "./local.db")
 	if err != nil {
 		return nil, err
@@ -81,7 +81,7 @@ func (s *Storage) GetEvents() ([]Event, error) {
 	return Events, nil
 }
 
-func (s *Storage) WriteConfig(config *config.ConfigDb) error {
+func (s *Storage) WriteConfig(config *config.Config) error {
 	_, err := s.db.Exec("INSERT INTO configs (watch_dir, watched_file_types, repository_url, make_remote_backup, make_tags) VALUES (?, ?, ?, ?, ?)",
 		config.WatchDir,
 		config.WatchedFileTypes,
@@ -112,13 +112,13 @@ func rowToEvent(row *sql.Rows) (Event, error) {
 }
 
 // Show all configs if needed
-func (s *Storage) GetConfigs() ([]config.ConfigDb, error) {
+func (s *Storage) GetConfigs() ([]config.Config, error) {
 	rows, err := s.db.Query("SELECT * FROM configs")
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	Configs := []config.ConfigDb{}
+	Configs := []config.Config{}
 	for raw := rows.Next(); raw; raw = rows.Next() {
 		config, err := rowToConfig(rows)
 		if err != nil {
@@ -129,8 +129,8 @@ func (s *Storage) GetConfigs() ([]config.ConfigDb, error) {
 	return Configs, nil
 }
 
-func rowToConfig(row *sql.Rows) (config.ConfigDb, error) {
-	var config config.ConfigDb
+func rowToConfig(row *sql.Rows) (config.Config, error) {
+	var config config.Config
 	err := row.Scan(
 		&config.ID,
 		&config.WatchDir,
@@ -145,9 +145,9 @@ func rowToConfig(row *sql.Rows) (config.ConfigDb, error) {
 	return config, nil
 }
 
-func (s *Storage) GetConfig(name string) (config.ConfigDb, error) {
+func (s *Storage) GetConfig(name string) (config.Config, error) {
 	row := s.db.QueryRow("SELECT * FROM configs WHERE watch_dir = ?", name)
-	var config config.ConfigDb
+	var config config.Config
 	err := row.Scan(
 		&config.ID,
 		&config.WatchDir,
@@ -162,7 +162,7 @@ func (s *Storage) GetConfig(name string) (config.ConfigDb, error) {
 	return config, nil
 }
 
-func (s *Storage) UpdateConfig(config config.ConfigDb) error {
+func (s *Storage) UpdateConfig(config config.Config) error {
 	_, err := s.db.Exec("UPDATE configs SET watch_dir = ?, watched_file_types = ?, repository_url = ?, make_remote_backup = ?, make_tags = ? WHERE id = ?",
 		config.WatchDir,
 		config.WatchedFileTypes,
