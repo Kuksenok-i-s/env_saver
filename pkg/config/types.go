@@ -1,6 +1,6 @@
 package config
 
-type ConfigDb struct {
+type Config struct {
 	ID               int
 	WatchDir         string
 	WatchedFileTypes string

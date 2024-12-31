@@ -14,7 +14,6 @@ func GetConfig() *Config {
 		log.Fatal(err)
 	}
 	var data map[string]interface{}
-
 	// TODO add validation function
 	err = yaml.Unmarshal(f, &data)
 	if !GetConfig().validate(data) {
@@ -24,23 +23,16 @@ func GetConfig() *Config {
 		log.Fatal(err)
 	}
 
-	return &Config{
-		WatchDir:   data["watch_dir"].(string),
-		RepoDir:    data["repo_dir"].(string),
-		RemoteRepo: data["remote_repo"].(string),
-		Branch:     data["branch"].(string),
-		SecretKey:  data["secret_key"].(string),
-	}
+	return getConfigFromMap(data)
 }
 
-func GetConfigFromMap(data map[string]interface{}) *Config {
+func getConfigFromMap(data map[string]interface{}) *Config {
 	return &Config{
-		WatchDir:   data["watch_dir"].(string),
-		RepoDir:    data["repo_dir"].(string),
-		RemoteRepo: data["remote_repo"].(string),
-		Branch:     data["branch"].(string),
-		SecretKey:  data["secret_key"].(string),
-	}
+		WatchDir:         data["watch_dir"].(string),
+		WatchedFileTypes: data["watched_file_types"].(string),
+		RemoteRepo:       data["remote_repo"].(string),
+		MakeRemoteBackup: data["make_remote_backup"].(bool),
+		MakeTags:         data["make_tags"].(bool)}
 }
 
 // TODO refactor this mess XD
