@@ -42,8 +42,11 @@ func WatchFileChanges(config *config.Config) {
 			if event.Op&fsnotify.Write == fsnotify.Write || event.Op&fsnotify.Create == fsnotify.Create {
 				fmt.Printf("Detected change: %s\n", event.Name)
 				commitMsg := fmt.Sprintf("Config changed on %s", time.Now().Format(time.RFC1123))
-				if err := storage.GitPush(config.RepoDir, commitMsg); err != nil {
+				if err := storage.GitCommit(config.RemoteRepo, commitMsg); err != nil {
 					fmt.Printf("Error committing changes: %v\n", err)
+				}
+				if err := storage.GitPush(config.RemoteRepo, commitMsg); err != nil {
+					fmt.Printf("Error pushing changes: %v\n", err)
 				}
 			}
 		case err := <-watcher.Errors:

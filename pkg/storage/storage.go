@@ -8,7 +8,7 @@ import (
 // Here and later I'm going to be using the term "storage" to refer to the git repository.
 // Understand and forgive me.
 
-func GitPush(repoDir string, commitMsg string) error {
+func GitCommit(repoDir string, commitMsg string) error {
 	cmd := exec.Command("git", "add", ".")
 	cmd.Dir = repoDir
 	if err := cmd.Run(); err != nil {
@@ -20,8 +20,11 @@ func GitPush(repoDir string, commitMsg string) error {
 	if err := cmd.Run(); err != nil {
 		return fmt.Errorf("failed to commit changes: %v", err)
 	}
+	return nil
+}
 
-	cmd = exec.Command("git", "push", "origin", "main")
+func GitPush(repoDir string, commitMsg string) error {
+	cmd := exec.Command("git", "push", "origin", "main")
 	cmd.Dir = repoDir
 	if err := cmd.Run(); err != nil {
 		return fmt.Errorf("failed to push changes: %v", err)
