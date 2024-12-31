@@ -39,6 +39,7 @@ func InitStorage(config *config.Config) (*Storage, error) {
 			'watch_dir' VARCHAR(255) NOT NULL,
 			'watched_file_types' TEXT,
 			'repository_url' VARCHAR(255) NOT NULL,
+			'repository_dir' VARCHAR(255) NOT NULL,
 			'make_remote_backup' BOOLEAN NOT NULL,
 			'make_tags' BOOLEAN NOT NULL,
 		)
@@ -81,20 +82,6 @@ func (s *Storage) GetEvents() ([]Event, error) {
 	return Events, nil
 }
 
-func (s *Storage) WriteConfig(config *config.Config) error {
-	_, err := s.db.Exec("INSERT INTO configs (watch_dir, watched_file_types, repository_url, make_remote_backup, make_tags) VALUES (?, ?, ?, ?, ?)",
-		config.WatchDir,
-		config.WatchedFileTypes,
-		config.RemoteRepo,
-		config.MakeRemoteBackup,
-		config.MakeTags,
-	)
-	if err != nil {
-		return err
-	}
-	return nil
-}
-
 func rowToEvent(row *sql.Rows) (Event, error) {
 	var event Event
 	err := row.Scan(
@@ -109,6 +96,21 @@ func rowToEvent(row *sql.Rows) (Event, error) {
 		return Event{}, err
 	}
 	return event, nil
+}
+
+func (s *Storage) WriteConfig(config *config.Config) error {
+	_, err := s.db.Exec("INSERT INTO configs (watch_dir, watched_file_types, repository_url, repository_dir, make_remote_backup, make_tags) VALUES (?, ?, ?, ?, ?, ?)",
+		config.WatchDir,
+		config.WatchedFileTypes,
+		config.RemoteRepo,
+		config.RepositoryDir,
+		config.MakeRemoteBackup,
+		config.MakeTags,
+	)
+	if err != nil {
+		return err
+	}
+	return nil
 }
 
 // Show all configs if needed
@@ -136,6 +138,7 @@ func rowToConfig(row *sql.Rows) (config.Config, error) {
 		&config.WatchDir,
 		&config.WatchedFileTypes,
 		&config.RemoteRepo,
+		&config.RepositoryDir,
 		&config.MakeRemoteBackup,
 		&config.MakeTags,
 	)
@@ -153,6 +156,7 @@ func (s *Storage) GetConfig(name string) (config.Config, error) {
 		&config.WatchDir,
 		&config.WatchedFileTypes,
 		&config.RemoteRepo,
+		&config.RepositoryDir,
 		&config.MakeRemoteBackup,
 		&config.MakeTags,
 	)
@@ -163,10 +167,11 @@ func (s *Storage) GetConfig(name string) (config.Config, error) {
 }
 
 func (s *Storage) UpdateConfig(config config.Config) error {
-	_, err := s.db.Exec("UPDATE configs SET watch_dir = ?, watched_file_types = ?, repository_url = ?, make_remote_backup = ?, make_tags = ? WHERE id = ?",
+	_, err := s.db.Exec("UPDATE configs SET watch_dir = ?, watched_file_types = ?, repository_dir = ?, repository_url = ?, make_remote_backup = ?, make_tags = ? WHERE id = ?",
 		config.WatchDir,
 		config.WatchedFileTypes,
 		config.RemoteRepo,
+		config.RepositoryDir,
 		config.MakeRemoteBackup,
 		config.MakeTags,
 		config.ID,

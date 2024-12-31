@@ -5,6 +5,7 @@ type Config struct {
 	WatchDir         string
 	WatchedFileTypes string
 	RemoteRepo       string
+	RepositoryDir    string
 	MakeRemoteBackup bool
 	MakeTags         bool
 }
