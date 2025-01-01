@@ -19,6 +19,7 @@ type LocalStorageInterface interface {
 	GetConfigs() ([]config.Config, error)
 	GetConfig(name string) (config.Config, error)
 	UpdateConfig(config config.Config) error
+	Close()
 }
 
 func NewLocalStorage() LocalStorageInterface {
@@ -30,6 +31,10 @@ func NewLocalStorage() LocalStorageInterface {
 	return &Storage{
 		db: db,
 	}
+}
+
+func (s *Storage) Close() {
+	s.db.Close()
 }
 
 func initLocalStorage(db *sql.DB) (*Storage, error) {

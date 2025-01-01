@@ -15,8 +15,8 @@ import (
 
 type GitStorageInterface interface {
 	GitInit() error
-	GitCommit(commitMsg string) error
-	GitPush(commitMsg string) error
+	GitCommit(commitMsg string) (string, error)
+	GitPush() error
 	RestoreFiles() error
 }
 
@@ -51,22 +51,30 @@ func (gs *gitStorage) GitInit() error {
 	return nil
 }
 
-func (gs *gitStorage) GitCommit(commitMsg string) error {
+func (gs *gitStorage) GitCommit(commitMsg string) (string, error) {
 	cmd := exec.Command("git", "add", ".")
 	cmd.Dir = gs.repodir
 	if err := cmd.Run(); err != nil {
-		return fmt.Errorf("failed to add files: %v", err)
+		return "", fmt.Errorf("failed to add files: %v", err)
 	}
 
 	cmd = exec.Command("git", "commit", "-m", commitMsg)
 	cmd.Dir = gs.repodir
 	if err := cmd.Run(); err != nil {
-		return fmt.Errorf("failed to commit changes: %v", err)
+		return "", fmt.Errorf("failed to commit changes: %v", err)
 	}
-	return nil
+
+	cmd = exec.Command("git", "rev-parse", "HEAD")
+	cmd.Dir = gs.repodir
+	commitHash, err := cmd.Output()
+	if err != nil {
+		return "", fmt.Errorf("failed to get commit hash: %v", err)
+	}
+
+	return strings.TrimSpace(string(commitHash)), nil
 }
 
-func (gs *gitStorage) GitPush(commitMsg string) error {
+func (gs *gitStorage) GitPush() error {
 	cmd := exec.Command("git", "push", "origin", "main")
 	cmd.Dir = gs.repodir
 	if err := cmd.Run(); err != nil {
