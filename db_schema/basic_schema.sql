@@ -13,6 +13,7 @@ CREATE TABLE IF NOT EXISTS 'configs' (
     'watch_dir' VARCHAR(255) NOT NULL,
     'watched_file_types' TEXT,
     'repository_url' VARCHAR(255) NOT NULL,
+    'repository_dir' VARCHAR(255) NOT NULL,
     'make_remote_backup' BOOLEAN NOT NULL,
     'make_tags' BOOLEAN NOT NULL,
 )
