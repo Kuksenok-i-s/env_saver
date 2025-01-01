@@ -9,13 +9,13 @@ import (
 	"time"
 
 	"github.com/Kuksenok-i-s/env_saver/pkg/config"
-
 	"github.com/fsnotify/fsnotify"
 )
 
 type FilesHandler interface {
 	RestoreFiles(repoDir string) error
-	WatchFileChanges(events chan<- string, errors chan<- error)
+	WatchFileChanges(events chan<- FileUpdateEvent, errors chan<- error)
+	SaveFiles(repoDir string) error
 }
 
 type filesHandler struct {
@@ -56,7 +56,7 @@ func copyFile(src, destDir string) error {
 	return nil
 }
 
-func (fh *filesHandler) WatchFileChanges(events chan<- string, errors chan<- error) {
+func (fh *filesHandler) WatchFileChanges(events chan<- FileUpdateEvent, errors chan<- error) {
 	watcher, err := fsnotify.NewWatcher()
 	if err != nil {
 		errors <- fmt.Errorf("error creating watcher: %v", err)
@@ -80,7 +80,13 @@ func (fh *filesHandler) WatchFileChanges(events chan<- string, errors chan<- err
 					if strings.HasSuffix(event.Name, fileType) {
 						log.Printf("Detected change: %s\n", event.Name)
 						eventMsg := fmt.Sprintf("File changed: %s at %s", event.Name, time.Now().Format(time.RFC1123))
-						events <- eventMsg
+						eventMetadata := FileUpdateEvent{
+							FileName:     event.Name,
+							EventType:    getEventType(event),
+							EventMessage: eventMsg,
+							Time:         time.Now(),
+						}
+						events <- eventMetadata
 						break
 					}
 				}
@@ -125,6 +131,20 @@ func (fh *filesHandler) getFileTypes() []string {
 	return types
 }
 
+func (fh *filesHandler) SaveFiles(repoDir string) error {
+	files, err := fh.getFilesByType()
+	if err != nil {
+		return err
+	}
+	for _, file := range files {
+		err := copyFile(file, repoDir)
+		if err != nil {
+			return fmt.Errorf("error copying file %s: %v", file, err)
+		}
+	}
+	return nil
+}
+
 // TODO: refactor
 func (fh *filesHandler) getFilesByType() ([]string, error) {
 	files, err := os.ReadDir(fh.config.WatchDir)
@@ -146,4 +166,15 @@ func (fh *filesHandler) getFilesByType() ([]string, error) {
 		return nil, fmt.Errorf("no files found with type %s", fh.config.WatchedFileTypes)
 	}
 	return matchingFiles, nil
+}
+
+func getEventType(event fsnotify.Event) string {
+	switch {
+	case event.Has(fsnotify.Create):
+		return "create"
+	case event.Has(fsnotify.Write):
+		return "write"
+	default:
+		return "unknown"
+	}
 }
