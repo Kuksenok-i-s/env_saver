@@ -12,9 +12,21 @@ type Storage struct {
 	db *sql.DB
 }
 
-// Forgive me for this
-func InitStorage(config *config.Config) (*Storage, error) {
-	db, err := sql.Open("sqlite3", "./local.db")
+type StorageInterface interface {
+	SaveEvent(event Event) error
+	GetEvents() ([]Event, error)
+	WriteConfig(config *config.Config) error
+	GetConfigs() ([]config.Config, error)
+	GetConfig(name string) (config.Config, error)
+	UpdateConfig(config config.Config) error
+}
+
+func NewStorage() (*Storage, error) {
+	return initLocalStorage()
+}
+
+func initLocalStorage() (*Storage, error) {
+	db, err := sql.Open("sqlite3", "./local_storage.db")
 	if err != nil {
 		return nil, err
 	}
