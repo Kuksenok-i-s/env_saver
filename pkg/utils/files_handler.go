@@ -2,7 +2,9 @@ package utils
 
 import (
 	"fmt"
+	"os"
 	"os/exec"
+	"strings"
 	"time"
 
 	"github.com/Kuksenok-i-s/env_saver/pkg/config"
@@ -10,6 +12,14 @@ import (
 
 	"github.com/fsnotify/fsnotify"
 )
+
+type FilesHandler interface {
+	HandleFileChanges(config *config.Config)
+	RestoreFiles(repoDir string) error
+	WatchFileChanges(config *config.Config)
+	GetFilesByType(config *config.Config) ([]string, error)
+	GenEnvsByFile(fileNames []string) (map[string]map[string]string, error)
+}
 
 func RestoreFiles(repoDir string) error {
 	cmd := exec.Command("git", "pull", "origin", "main")
@@ -53,4 +63,60 @@ func WatchFileChanges(config *config.Config) {
 			fmt.Printf("Watcher error: %v\n", err)
 		}
 	}
+}
+
+func getFileTypes(config *config.Config) []string {
+	if config.WatchedFileTypes == "" {
+		defaultTypes := []string{
+			".env",
+			".env.development",
+			".env.production",
+			".env.test",
+			".bashrc",
+			".bash_profile",
+			".zshrc",
+			".profile",
+			".vimrc",
+			".gitconfig",
+			"Makefile",
+			// TODO add add handlers and parsers for other file types
+			// ".yaml",
+			// ".yml",
+			// ".json",
+			// ".toml",
+			// ".ini",
+			// ".npmrc",
+			// ".dockerignore",
+		}
+		return defaultTypes
+	}
+
+	types := strings.Split(config.WatchedFileTypes, ",")
+
+	for i := range types {
+		types[i] = strings.TrimSpace(types[i])
+	}
+	return types
+}
+
+func GetFilesByType(config *config.Config) ([]string, error) {
+	files, err := os.ReadDir(config.WatchDir)
+	if err != nil {
+		return nil, err
+	}
+	var matchingFiles []string
+	for _, file := range files {
+		if file.IsDir() {
+			continue
+		}
+		for _, fileType := range getFileTypes(config) {
+			if strings.HasSuffix(file.Name(), fileType) {
+				matchingFiles = append(matchingFiles, file.Name())
+			}
+		}
+	}
+	if len(matchingFiles) == 0 {
+		return nil, fmt.Errorf("no files found with type %s", config.WatchedFileTypes)
+	}
+	return matchingFiles, nil
 }
