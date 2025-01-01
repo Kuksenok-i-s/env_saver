@@ -2,21 +2,20 @@ package utils
 
 import (
 	"fmt"
+	"log"
 	"os"
-	"os/exec"
+	"path/filepath"
 	"strings"
 	"time"
 
 	"github.com/Kuksenok-i-s/env_saver/pkg/config"
-	"github.com/Kuksenok-i-s/env_saver/pkg/storage"
 
 	"github.com/fsnotify/fsnotify"
 )
 
 type FilesHandler interface {
 	RestoreFiles(repoDir string) error
-	WatchFileChanges()
-	GetFilesByType() ([]string, error)
+	WatchFileChanges(events chan<- string, errors chan<- error)
 }
 
 type filesHandler struct {
@@ -30,45 +29,64 @@ func NewFilesHandler(config *config.Config) FilesHandler {
 }
 
 func (fh *filesHandler) RestoreFiles(repoDir string) error {
-	cmd := exec.Command("git", "pull", "origin", "main")
-	cmd.Dir = repoDir
-	if err := cmd.Run(); err != nil {
-		return fmt.Errorf("failed to restore files: %v", err)
+	files, err := fh.getFilesByType()
+	if err != nil {
+		return err
+	}
+	for _, file := range files {
+		err := copyFile(file, repoDir)
+		if err != nil {
+			return fmt.Errorf("error copying file %s: %v", file, err)
+		}
 	}
 	return nil
 }
 
-func (fh *filesHandler) WatchFileChanges() {
+func copyFile(src, destDir string) error {
+	input, err := os.ReadFile(src)
+	if err != nil {
+		return err
+	}
+	destPath := filepath.Join(destDir, filepath.Base(src))
+	err = os.WriteFile(destPath, input, 0644)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (fh *filesHandler) WatchFileChanges(events chan<- string, errors chan<- error) {
 	watcher, err := fsnotify.NewWatcher()
 	if err != nil {
-		fmt.Printf("Error creating watcher: %v\n", err)
+		errors <- fmt.Errorf("error creating watcher: %v", err)
 		return
 	}
 	defer watcher.Close()
 
 	err = watcher.Add(fh.config.WatchDir)
 	if err != nil {
-		fmt.Printf("Error watching directory: %v\n", err)
+		errors <- fmt.Errorf("error watching directory: %v", err)
 		return
 	}
 
 	fmt.Printf("Watching changes in %s\n", fh.config.WatchDir)
-
+	// TODO: refactor
 	for {
 		select {
 		case event := <-watcher.Events:
-			if event.Op&fsnotify.Write == fsnotify.Write || event.Op&fsnotify.Create == fsnotify.Create {
-				fmt.Printf("Detected change: %s\n", event.Name)
-				commitMsg := fmt.Sprintf("Config changed on %s", time.Now().Format(time.RFC1123))
-				if err := storage.GitCommit(fh.config.RemoteRepo, commitMsg); err != nil {
-					fmt.Printf("Error committing changes: %v\n", err)
-				}
-				if err := storage.GitPush(fh.config.RemoteRepo, commitMsg); err != nil {
-					fmt.Printf("Error pushing changes: %v\n", err)
+			if event.Has(fsnotify.Write) || event.Has(fsnotify.Create) {
+				for _, fileType := range fh.getFileTypes() {
+					if strings.HasSuffix(event.Name, fileType) {
+						log.Printf("Detected change: %s\n", event.Name)
+						eventMsg := fmt.Sprintf("File changed: %s at %s", event.Name, time.Now().Format(time.RFC1123))
+						events <- eventMsg
+						break
+					}
 				}
 			}
 		case err := <-watcher.Errors:
-			fmt.Printf("Watcher error: %v\n", err)
+			errors <- fmt.Errorf("watcher error: %v", err)
 		}
 	}
 }
@@ -108,7 +126,7 @@ func (fh *filesHandler) getFileTypes() []string {
 }
 
 // TODO: refactor
-func (fh *filesHandler) GetFilesByType() ([]string, error) {
+func (fh *filesHandler) getFilesByType() ([]string, error) {
 	files, err := os.ReadDir(fh.config.WatchDir)
 	if err != nil {
 		return nil, err
