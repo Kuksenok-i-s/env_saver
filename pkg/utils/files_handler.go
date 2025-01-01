@@ -14,14 +14,22 @@ import (
 )
 
 type FilesHandler interface {
-	HandleFileChanges(config *config.Config)
 	RestoreFiles(repoDir string) error
-	WatchFileChanges(config *config.Config)
-	GetFilesByType(config *config.Config) ([]string, error)
-	GenEnvsByFile(fileNames []string) (map[string]map[string]string, error)
+	WatchFileChanges()
+	GetFilesByType() ([]string, error)
 }
 
-func RestoreFiles(repoDir string) error {
+type filesHandler struct {
+	config *config.Config
+}
+
+func NewFilesHandler(config *config.Config) FilesHandler {
+	return &filesHandler{
+		config: config,
+	}
+}
+
+func (fh *filesHandler) RestoreFiles(repoDir string) error {
 	cmd := exec.Command("git", "pull", "origin", "main")
 	cmd.Dir = repoDir
 	if err := cmd.Run(); err != nil {
@@ -30,7 +38,7 @@ func RestoreFiles(repoDir string) error {
 	return nil
 }
 
-func WatchFileChanges(config *config.Config) {
+func (fh *filesHandler) WatchFileChanges() {
 	watcher, err := fsnotify.NewWatcher()
 	if err != nil {
 		fmt.Printf("Error creating watcher: %v\n", err)
@@ -38,13 +46,13 @@ func WatchFileChanges(config *config.Config) {
 	}
 	defer watcher.Close()
 
-	err = watcher.Add(config.WatchDir)
+	err = watcher.Add(fh.config.WatchDir)
 	if err != nil {
 		fmt.Printf("Error watching directory: %v\n", err)
 		return
 	}
 
-	fmt.Printf("Watching changes in %s\n", config.WatchDir)
+	fmt.Printf("Watching changes in %s\n", fh.config.WatchDir)
 
 	for {
 		select {
@@ -52,10 +60,10 @@ func WatchFileChanges(config *config.Config) {
 			if event.Op&fsnotify.Write == fsnotify.Write || event.Op&fsnotify.Create == fsnotify.Create {
 				fmt.Printf("Detected change: %s\n", event.Name)
 				commitMsg := fmt.Sprintf("Config changed on %s", time.Now().Format(time.RFC1123))
-				if err := storage.GitCommit(config.RemoteRepo, commitMsg); err != nil {
+				if err := storage.GitCommit(fh.config.RemoteRepo, commitMsg); err != nil {
 					fmt.Printf("Error committing changes: %v\n", err)
 				}
-				if err := storage.GitPush(config.RemoteRepo, commitMsg); err != nil {
+				if err := storage.GitPush(fh.config.RemoteRepo, commitMsg); err != nil {
 					fmt.Printf("Error pushing changes: %v\n", err)
 				}
 			}
@@ -65,8 +73,8 @@ func WatchFileChanges(config *config.Config) {
 	}
 }
 
-func getFileTypes(config *config.Config) []string {
-	if config.WatchedFileTypes == "" {
+func (fh *filesHandler) getFileTypes() []string {
+	if fh.config.WatchedFileTypes == "" {
 		defaultTypes := []string{
 			".env",
 			".env.development",
@@ -91,7 +99,7 @@ func getFileTypes(config *config.Config) []string {
 		return defaultTypes
 	}
 
-	types := strings.Split(config.WatchedFileTypes, ",")
+	types := strings.Split(fh.config.WatchedFileTypes, ",")
 
 	for i := range types {
 		types[i] = strings.TrimSpace(types[i])
@@ -99,8 +107,9 @@ func getFileTypes(config *config.Config) []string {
 	return types
 }
 
-func GetFilesByType(config *config.Config) ([]string, error) {
-	files, err := os.ReadDir(config.WatchDir)
+// TODO: refactor
+func (fh *filesHandler) GetFilesByType() ([]string, error) {
+	files, err := os.ReadDir(fh.config.WatchDir)
 	if err != nil {
 		return nil, err
 	}
@@ -109,14 +118,14 @@ func GetFilesByType(config *config.Config) ([]string, error) {
 		if file.IsDir() {
 			continue
 		}
-		for _, fileType := range getFileTypes(config) {
+		for _, fileType := range fh.getFileTypes() {
 			if strings.HasSuffix(file.Name(), fileType) {
 				matchingFiles = append(matchingFiles, file.Name())
 			}
 		}
 	}
 	if len(matchingFiles) == 0 {
-		return nil, fmt.Errorf("no files found with type %s", config.WatchedFileTypes)
+		return nil, fmt.Errorf("no files found with type %s", fh.config.WatchedFileTypes)
 	}
 	return matchingFiles, nil
 }
