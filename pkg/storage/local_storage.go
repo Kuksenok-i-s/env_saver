@@ -12,7 +12,7 @@ type Storage struct {
 	db *sql.DB
 }
 
-type StorageInterface interface {
+type LocalStorageInterface interface {
 	SaveEvent(event Event) error
 	GetEvents() ([]Event, error)
 	WriteConfig(config *config.Config) error
@@ -21,17 +21,20 @@ type StorageInterface interface {
 	UpdateConfig(config config.Config) error
 }
 
-func NewStorage() (*Storage, error) {
-	return initLocalStorage()
-}
-
-func initLocalStorage() (*Storage, error) {
+func NewLocalStorage() LocalStorageInterface {
 	db, err := sql.Open("sqlite3", "./local_storage.db")
 	if err != nil {
-		return nil, err
+		log.Fatal(err)
 	}
+	initLocalStorage(db)
+	return &Storage{
+		db: db,
+	}
+}
 
-	_, err = db.Exec(`
+func initLocalStorage(db *sql.DB) (*Storage, error) {
+
+	_, err := db.Exec(`
 		CREATE TABLE IF NOT EXISTS 'events' (
 			'id' INT NOT NULL AUTO_INCREMENT,
 			'title' VARCHAR(255) NOT NULL,
